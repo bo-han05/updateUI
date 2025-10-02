@@ -1,4 +1,5 @@
 library(shiny)
+library(ggplot2)
 
 ui <- fluidPage(
     titlePanel("Dataset Visualizer"),
@@ -7,35 +8,50 @@ ui <- fluidPage(
             selectInput(inputId = "dataset",
                         label = "Choose a dataset",
                         choices = c("airquality", "mtcars")),
-            selectInput(inputId = "variable",
-                        label = "Choose a variable",
+            selectInput(inputId = "xvar",
+                        label = "Choose X variable",
+                        choices = NULL),
+            selectInput(inputId = "yvar",
+                        label = "Choose Y variable",
                         choices = NULL),
             actionButton(inputId = "plot",
                          label = "Plot!")
         ),
         mainPanel(
-            plotOutput("summary")
+          plotOutput("summary")
         )
     )
 )
 
 server <- function(input, output, session) {
-    observeEvent(input$dataset, {
-        dat <- get(input$dataset)
-        updateSelectInput(inputId = "variable",
-                          choices = names(dat))
-    })
-    dat <- eventReactive(input$plot, {
-        get(input$dataset)
-    })
-    variable <- eventReactive(input$plot, {
-        input$variable
-    })
-    output$summary <- renderPlot({
-        dat() |>
-            ggplot(aes(y = .data[[variable()]])) +
-            geom_boxplot() +
-            labs(title = sprintf("Boxplot of %s", variable()))
-    })
+  observeEvent(input$dataset, {
+    dat <- get(input$dataset)
+    updateSelectInput(session, "xvar", choices = names(dat))
+    updateSelectInput(session, "yvar", choices = names(dat))
+  })
+
+  observeEvent(input$xvar, {
+    dat <- get(input$dataset)
+    updateSelectInput(session, "yvar", 
+                      choices = setdiff(names(dat), input$xvar))
+  })
+
+  dat <- eventReactive(input$plot, {
+    get(input$dataset)
+  })
+  
+  xvar <- eventReactive(input$plot, {
+    input$xvar
+  })
+  
+  yvar <- eventReactive(input$plot, {
+    input$yvar
+  })
+
+  output$summary <- renderPlot({
+    ggplot(dat(), aes(x = .data[[xvar()]], y = .data[[yvar()]])) +
+      geom_point() +
+      labs(title = sprintf("Scatterplot of %s vs %s", yvar(), xvar()))
+  })
 }
 shinyApp(ui, server)
