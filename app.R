@@ -23,6 +23,7 @@ ui <- fluidPage(
     )
 )
 
+# Changed to scatter plot
 server <- function(input, output, session) {
   observeEvent(input$dataset, {
     dat <- get(input$dataset)
